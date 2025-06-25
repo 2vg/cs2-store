@@ -63,10 +63,25 @@ public static class Item
 
     public static bool CanBuy(CCSPlayerController player, Dictionary<string, string> item)
     {
-        if (Credits.Get(player) < int.Parse(item["price"]))
-            return false;
+        item.TryGetValue("flag", out string? flag);
+        bool hasFlag = MenuBase.CheckFlag(player, flag, false);
+        bool isVip = IsPlayerVip(player);
 
         if (!ItemModuleManager.Modules.TryGetValue(item["type"], out IItemModule? type))
+            return false;
+
+        if (hasFlag || isVip)
+        {
+            if (!type.Equipable)
+                return false;
+
+            if (item.TryGetValue("team", out string? steam) && int.TryParse(steam, out int team) && team >= 1 && team <= 3 && player.TeamNum != team)
+                return false;
+
+            return true;
+        }
+
+        if (Credits.Get(player) < int.Parse(item["price"]))
             return false;
 
         if (type.RequiresAlive == true && !player.PawnIsAlive)
@@ -86,7 +101,30 @@ public static class Item
 
     public static bool Purchase(CCSPlayerController player, Dictionary<string, string> item)
     {
-        if (Credits.Get(player) < int.Parse(item["price"]))
+        item.TryGetValue("flag", out string? flag);
+        bool hasFlag = MenuBase.CheckFlag(player, flag, false);
+        bool isVip = IsPlayerVip(player);
+        
+        int price = int.Parse(item["price"]);
+
+        if (hasFlag || isVip)
+        {
+            if (!ItemModuleManager.Modules.TryGetValue(item["type"], out IItemModule? itemType))
+            {
+                player.PrintToChatMessage("No type found", item["type"]);
+                return false;
+            }
+
+            if (!itemType.Equipable)
+            {
+                player.PrintToChatMessage("This item cannot be equipped");
+                return false;
+            }
+
+            return Equip(player, item);
+        }
+
+        if (Credits.Get(player) < price)
         {
             player.PrintToChatMessage("No credits enough");
             return false;
@@ -121,12 +159,8 @@ public static class Item
                 return false;
         }
 
-        int price = int.Parse(item["price"]);
-        if (price > 0)
-        {
-            Credits.Give(player, -price);
-            player.PrintToChatMessage("Purchase Succeeded", GetItemName(player, item));
-        }
+        Credits.Give(player, -price);
+        player.PrintToChatMessage("Purchase Succeeded", GetItemName(player, item));
 
         Store.Api.PlayerPurchaseItem(player, item);
 
@@ -239,8 +273,21 @@ public static class Item
 
         if (!ignoreVip && IsPlayerVip(player)) return true;
 
+        // 個別アイテムのフラグチェック
         item.TryGetValue("flag", out string? flag);
-        return MenuBase.CheckFlag(player, flag, false) || Instance.GlobalStorePlayerItems.Any(p => p.SteamID == player.SteamID && p.Type == type && p.UniqueId == uniqueId);
+        bool hasFlag = MenuBase.CheckFlag(player, flag, false);
+
+        if (hasFlag) return true;
+
+        Store_Item? purchasedItem = Instance.GlobalStorePlayerItems.FirstOrDefault(p =>
+            p.SteamID == player.SteamID && p.Type == type && p.UniqueId == uniqueId);
+
+        if (purchasedItem != null)
+        {
+            return purchasedItem.DateOfExpiration == DateTime.MinValue || purchasedItem.DateOfExpiration > DateTime.Now;
+        }
+        
+        return false;
     }
 
     public static bool PlayerUsing(CCSPlayerController player, string type, string uniqueId)
@@ -303,10 +350,30 @@ public static class Item
 
         foreach (Store_Item? item in itemsToRemove)
         {
-            Database.ExecuteAsync($"DELETE FROM {storeEquipmentTableName} WHERE SteamID = @SteamID AND UniqueId = @UniqueId", new { item.SteamID, item.UniqueId });
+            CCSPlayerController? player = Utilities.GetPlayers().FirstOrDefault(p => p.SteamID == item.SteamID);
+            Dictionary<string, string>? itemConfig = GetItem(item.UniqueId);
+            
+            bool shouldRemoveEquipment = true;
+            
+            if (player != null && itemConfig != null)
+            {
+                itemConfig.TryGetValue("flag", out string? flag);
+                bool hasFlag = MenuBase.CheckFlag(player, flag, false);
+                bool isVip = IsPlayerVip(player);
+
+                if (hasFlag || isVip)
+                {
+                    shouldRemoveEquipment = false;
+                }
+            }
+            
+            if (shouldRemoveEquipment)
+            {
+                Database.ExecuteAsync($"DELETE FROM {storeEquipmentTableName} WHERE SteamID = @SteamID AND UniqueId = @UniqueId", new { item.SteamID, item.UniqueId });
+                Instance.GlobalStorePlayerEquipments.RemoveAll(i => i.SteamID == item.SteamID && i.UniqueId == item.UniqueId);
+            }
 
             Instance.GlobalStorePlayerItems.Remove(item);
-            Instance.GlobalStorePlayerEquipments.RemoveAll(i => i.UniqueId == item.UniqueId);
         }
     }
 }
