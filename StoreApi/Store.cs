@@ -45,6 +45,37 @@ public abstract class Store
         public required bool Equipable;
         public bool? Alive;
     }
+
+    public class Store_PlayerCurrency
+    {
+        public required ulong SteamID { get; set; }
+        public required string CurrencyType { get; set; }
+        public int Amount { get; set; }
+        public int OriginalAmount { get; set; }
+        public DateTime LastUpdated { get; set; }
+    }
+
+    public class Store_CurrencyType
+    {
+        public required string Type { get; set; }
+        public required string DisplayName { get; set; }
+        public string? Description { get; set; }
+        public string? Icon { get; set; }
+        public bool IsActive { get; set; } = true;
+        public DateTime DateCreated { get; set; }
+    }
+
+    public class Store_CurrencyItem
+    {
+        public required ulong SteamID { get; set; }
+        public required string CurrencyType { get; set; }
+        public int Price { get; set; }
+        public required string Type { get; set; }
+        public required string UniqueId { get; set; }
+        public DateTime DateOfPurchase { get; set; }
+        public DateTime DateOfExpiration { get; set; }
+    }
+
     public class PlayerTimer
     {
         public Timer? CreditIntervalTimer { get; set; }

@@ -1,0 +1,110 @@
+{
+  "Event Items": {
+    "name": "Event Items",
+    "currency_type": "event_points",
+    "Event Knife": {
+      "name": "Event Knife",
+      "type": "weapon",
+      "uniqueid": "event_knife",
+      "price": 100,
+      "currency_type": "event_points",
+      "weapon": "weapon_knife",
+      "model": "weapons/w_knife_t.vmdl",
+      "arms": "models/weapons/t_arms.vmdl"
+    },
+    "Event Skin": {
+      "name": "Event Player Skin",
+      "type": "playerskin",
+      "uniqueid": "event_skin",
+      "price": 50,
+      "currency_type": "event_points",
+      "model": "characters/models/tm_leet/tm_leet_variantj.vmdl",
+      "disableleg": false
+    }
+  },
+  "VIP Items": {
+    "name": "VIP Items",
+    "currency_type": "vip_tokens",
+    "VIP Trail": {
+      "name": "VIP Trail",
+      "type": "trail",
+      "uniqueid": "vip_trail",
+      "price": 25,
+      "currency_type": "vip_tokens",
+      "material": "materials/sprites/laserbeam.vmt",
+      "color": "255 215 0 255",
+      "life": 3.0,
+      "startwidth": 10.0,
+      "endwidth": 5.0
+    },
+    "VIP Health Boost": {
+      "name": "VIP Health Boost",
+      "type": "health",
+      "uniqueid": "vip_health",
+      "price": 15,
+      "currency_type": "vip_tokens",
+      "health": 150
+    }
+  },
+  "Achievement Items": {
+    "name": "Achievement Items",
+    "currency_type": "achievement_coins",
+    "Achievement Badge": {
+      "name": "Achievement Badge",
+      "type": "tags",
+      "uniqueid": "achievement_badge",
+      "price": 200,
+      "currency_type": "achievement_coins",
+      "scoretag": "[ACHIEVER]",
+      "chattag": "[ACHIEVER]"
+    },
+    "Achievement Armor": {
+      "name": "Achievement Armor",
+      "type": "armor",
+      "uniqueid": "achievement_armor",
+      "price": 75,
+      "currency_type": "achievement_coins",
+      "armor": 200,
+      "helmet": true
+    }
+  },
+  "Regular Store": {
+    "name": "Regular Store (Credits)",
+    "Weapons": {
+      "name": "Weapons",
+      "AK-47": {
+        "name": "AK-47",
+        "type": "weapon",
+        "uniqueid": "ak47",
+        "price": 2700,
+        "weapon": "weapon_ak47"
+      },
+      "AWP": {
+        "name": "AWP",
+        "type": "weapon",
+        "uniqueid": "awp",
+        "price": 4750,
+        "weapon": "weapon_awp"
+      }
+    },
+    "Equipment": {
+      "name": "Equipment",
+      "Kevlar": {
+        "name": "Kevlar",
+        "type": "armor",
+        "uniqueid": "kevlar",
+        "price": 650,
+        "armor": 100,
+        "helmet": false
+      },
+      "Kevlar + Helmet": {
+        "name": "Kevlar + Helmet",
+        "type": "armor",
+        "uniqueid": "kevlar_helmet",
+        "price": 1000,
+        "armor": 100,
+        "helmet": true
+      }
+    }
+  }
+}

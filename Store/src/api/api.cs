@@ -131,4 +131,59 @@ public class StoreAPI : IStoreApi
     {
         ItemModuleManager.RegisterModules(assembly);
     }
+
+    public int GetPlayerCurrency(CCSPlayerController player, string currencyType)
+    {
+        return Currency.Get(player, currencyType);
+    }
+
+    public int SetPlayerCurrency(CCSPlayerController player, string currencyType, int amount)
+    {
+        return Currency.Set(player, currencyType, amount);
+    }
+
+    public int GivePlayerCurrency(CCSPlayerController player, string currencyType, int amount)
+    {
+        return Currency.Give(player, currencyType, amount);
+    }
+
+    public bool SpendPlayerCurrency(CCSPlayerController player, string currencyType, int amount)
+    {
+        return Currency.Spend(player, currencyType, amount);
+    }
+
+    public List<Store_PlayerCurrency> GetPlayerCurrencies(CCSPlayerController player)
+    {
+        return Currency.GetPlayerCurrencies(player);
+    }
+
+    public List<Store_CurrencyType> GetAvailableCurrencyTypes()
+    {
+        return Currency.GetAvailableCurrencyTypes();
+    }
+
+    public bool RegisterCurrencyType(Store_CurrencyType currencyType)
+    {
+        bool result = Currency.RegisterCurrencyType(currencyType);
+        if (result)
+        {
+            Database.SaveCurrencyType(currencyType);
+        }
+        return result;
+    }
+
+    public Store_CurrencyType? GetCurrencyType(string currencyType)
+    {
+        return Currency.GetCurrencyType(currencyType);
+    }
+
+    public bool CurrencyItem_Purchase(CCSPlayerController player, Dictionary<string, string> item, string currencyType)
+    {
+        return CurrencyItem.Purchase(player, item, currencyType);
+    }
+
+    public List<Store_CurrencyItem> GetPlayerCurrencyItems(CCSPlayerController player, string? currencyType)
+    {
+        return CurrencyItem.GetPlayerItems(player, currencyType);
+    }
 }

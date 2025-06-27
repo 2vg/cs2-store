@@ -34,4 +34,15 @@ public interface IStoreApi
     List<Store_Item> GetPlayerItems(CCSPlayerController player, string? type);
     List<Store_Equipment> GetPlayerEquipments(CCSPlayerController player, string? type);
     void RegisterModules(Assembly assembly);
+
+    int GetPlayerCurrency(CCSPlayerController player, string currencyType);
+    int SetPlayerCurrency(CCSPlayerController player, string currencyType, int amount);
+    int GivePlayerCurrency(CCSPlayerController player, string currencyType, int amount);
+    bool SpendPlayerCurrency(CCSPlayerController player, string currencyType, int amount);
+    List<Store_PlayerCurrency> GetPlayerCurrencies(CCSPlayerController player);
+    List<Store_CurrencyType> GetAvailableCurrencyTypes();
+    bool RegisterCurrencyType(Store_CurrencyType currencyType);
+    Store_CurrencyType? GetCurrencyType(string currencyType);
+    bool CurrencyItem_Purchase(CCSPlayerController player, Dictionary<string, string> item, string currencyType);
+    List<Store_CurrencyItem> GetPlayerCurrencyItems(CCSPlayerController player, string? currencyType);
 }

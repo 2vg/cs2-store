@@ -20,6 +20,9 @@ public class Store : BasePlugin, IPluginConfig<Item_Config>
     public List<Store_Player> GlobalStorePlayers { get; set; } = [];
     public List<Store_Item> GlobalStorePlayerItems { get; set; } = [];
     public List<Store_Equipment> GlobalStorePlayerEquipments { get; set; } = [];
+    public List<Store_PlayerCurrency> GlobalStorePlayerCurrencies { get; set; } = [];
+    public List<Store_CurrencyType> GlobalStoreCurrencyTypes { get; set; } = [];
+    public List<Store_CurrencyItem> GlobalStoreCurrencyItems { get; set; } = [];
     public Dictionary<CCSPlayerController, PlayerTimer> GlobalDictionaryPlayer { get; set; } = [];
     public int GlobalTickrate { get; set; } = 0;
     public static Store Instance { get; set; } = new();

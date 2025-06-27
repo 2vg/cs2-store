@@ -56,6 +56,9 @@ public static class Database
             string store_players = config.StorePlayersName;
             string store_items = config.StoreItemsName;
             string store_equipments = config.StoreEquipments;
+            string store_currencies = config.StoreCurrenciesName;
+            string store_currency_types = config.StoreCurrencyTypesName;
+            string store_currency_items = config.StoreCurrencyItemsName;
 
             await connection.ExecuteAsync($@"
                 CREATE TABLE IF NOT EXISTS {store_players} (
@@ -92,8 +95,47 @@ public static class Database
                     Slot INT,
                     PRIMARY KEY (id)
                 );", transaction: transaction);
-
-            await connection.ExecuteAsync($@"
+    
+                await connection.ExecuteAsync($@"
+                    CREATE TABLE IF NOT EXISTS {store_currency_types} (
+                        id INT NOT NULL AUTO_INCREMENT,
+                        Type varchar(64) NOT NULL,
+                        DisplayName varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+                        Description TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+                        Icon varchar(255),
+                        IsActive BOOLEAN NOT NULL DEFAULT TRUE,
+                        DateCreated DATETIME NOT NULL,
+                        PRIMARY KEY (id),
+                        UNIQUE KEY Type (Type)
+                    );", transaction: transaction);
+    
+                await connection.ExecuteAsync($@"
+                    CREATE TABLE IF NOT EXISTS {store_currencies} (
+                        id INT NOT NULL AUTO_INCREMENT,
+                        SteamID BIGINT UNSIGNED NOT NULL,
+                        CurrencyType varchar(64) NOT NULL,
+                        Amount INT NOT NULL DEFAULT 0,
+                        LastUpdated DATETIME NOT NULL,
+                        PRIMARY KEY (id),
+                        UNIQUE KEY SteamID_CurrencyType (SteamID, CurrencyType),
+                        FOREIGN KEY (CurrencyType) REFERENCES {store_currency_types}(Type) ON DELETE CASCADE
+                    );", transaction: transaction);
+    
+                await connection.ExecuteAsync($@"
+                    CREATE TABLE IF NOT EXISTS {store_currency_items} (
+                        id INT NOT NULL AUTO_INCREMENT,
+                        SteamID BIGINT UNSIGNED NOT NULL,
+                        CurrencyType varchar(64) NOT NULL,
+                        Price INT UNSIGNED NOT NULL,
+                        Type varchar(16) NOT NULL,
+                        UniqueId varchar(256) NOT NULL,
+                        DateOfPurchase DATETIME NOT NULL,
+                        DateOfExpiration DATETIME NOT NULL,
+                        PRIMARY KEY (id),
+                        FOREIGN KEY (CurrencyType) REFERENCES {store_currency_types}(Type) ON DELETE CASCADE
+                    );", transaction: transaction);
+    
+                await connection.ExecuteAsync($@"
                 DELETE FROM {store_equipments}
                     WHERE NOT EXISTS (
                         SELECT 1 FROM {store_items}
@@ -164,7 +206,11 @@ public static class Database
                 SqlMapper.GridReader multiQuery = await connection.QueryMultipleAsync($@"
                 SELECT * FROM {Config.DatabaseConnection.StorePlayersName} WHERE SteamID = @SteamID;
                 SELECT * FROM {Config.DatabaseConnection.StoreItemsName} WHERE SteamID = @SteamID AND(DateOfExpiration > @Now OR DateOfExpiration = '0001-01-01 00:00:00');
-                SELECT * FROM " + Config.DatabaseConnection.StoreEquipments + @" WHERE SteamID = @SteamID"
+                SELECT * FROM {Config.DatabaseConnection.StoreEquipments} WHERE SteamID = @SteamID;
+                SELECT c.*, ct.DisplayName, ct.Description FROM {Config.DatabaseConnection.StoreCurrenciesName} c
+                    LEFT JOIN {Config.DatabaseConnection.StoreCurrencyTypesName} ct ON c.CurrencyType = ct.Type
+                    WHERE c.SteamID = @SteamID;
+                SELECT * FROM {Config.DatabaseConnection.StoreCurrencyTypesName} WHERE IsActive = TRUE"
                 ,
                 new
                 {
@@ -177,6 +223,10 @@ public static class Database
                 IEnumerable<Store_Item> items = await multiQuery.ReadAsync<Store_Item>();
 
                 IEnumerable<Store_Equipment> equipments = await multiQuery.ReadAsync<Store_Equipment>();
+
+                IEnumerable<Store_PlayerCurrency> currencies = await multiQuery.ReadAsync<Store_PlayerCurrency>();
+
+                IEnumerable<Store_CurrencyType> currencyTypes = await multiQuery.ReadAsync<Store_CurrencyType>();
 
                 Server.NextFrame(() =>
                 {
@@ -243,6 +293,34 @@ public static class Database
                         else
                         {
                             Instance.GlobalStorePlayerEquipments.Add(newEquipment);
+                        }
+                    }
+
+                    foreach (Store_PlayerCurrency newCurrency in currencies)
+                    {
+                        Store_PlayerCurrency? existingCurrency = Instance.GlobalStorePlayerCurrencies
+                            .FirstOrDefault(c => c.SteamID == newCurrency.SteamID && c.CurrencyType == newCurrency.CurrencyType);
+                        
+                        if (existingCurrency != null)
+                        {
+                            existingCurrency.Amount = newCurrency.Amount;
+                            existingCurrency.LastUpdated = newCurrency.LastUpdated;
+                        }
+                        else
+                        {
+                            newCurrency.OriginalAmount = newCurrency.Amount;
+                            Instance.GlobalStorePlayerCurrencies.Add(newCurrency);
+                        }
+                    }
+
+                    foreach (Store_CurrencyType newCurrencyType in currencyTypes)
+                    {
+                        Store_CurrencyType? existingCurrencyType = Instance.GlobalStoreCurrencyTypes
+                            .FirstOrDefault(ct => ct.Type == newCurrencyType.Type);
+                        
+                        if (existingCurrencyType == null)
+                        {
+                            Instance.GlobalStoreCurrencyTypes.Add(newCurrencyType);
                         }
                     }
                 });
@@ -403,12 +481,94 @@ public static class Database
             });
     }
 
+    public static void SavePlayerCurrency(CCSPlayerController player, Store_PlayerCurrency currency)
+    {
+        ExecuteAsync($@"
+            INSERT INTO {Config.DatabaseConnection.StoreCurrenciesName} (
+                SteamID, CurrencyType, Amount, LastUpdated
+            ) VALUES (
+                @SteamID, @CurrencyType, @Amount, @LastUpdated
+            ) ON DUPLICATE KEY UPDATE
+                Amount = @Amount,
+                LastUpdated = @LastUpdated;
+        ",
+        new
+        {
+            player.SteamID,
+            currency.CurrencyType,
+            currency.Amount,
+            LastUpdated = DateTime.Now
+        });
+    }
+
+    public static void SaveCurrencyType(Store_CurrencyType currencyType)
+    {
+        ExecuteAsync($@"
+            INSERT INTO {Config.DatabaseConnection.StoreCurrencyTypesName} (
+                Type, DisplayName, Description, Icon, IsActive, DateCreated
+            ) VALUES (
+                @Type, @DisplayName, @Description, @Icon, @IsActive, @DateCreated
+            ) ON DUPLICATE KEY UPDATE
+                DisplayName = @DisplayName,
+                Description = @Description,
+                Icon = @Icon,
+                IsActive = @IsActive;
+        ",
+        new
+        {
+            currencyType.Type,
+            currencyType.DisplayName,
+            currencyType.Description,
+            currencyType.Icon,
+            currencyType.IsActive,
+            DateCreated = currencyType.DateCreated == default ? DateTime.Now : currencyType.DateCreated
+        });
+    }
+
+    public static void SaveCurrencyItem(CCSPlayerController player, Store_CurrencyItem item)
+    {
+        ExecuteAsync($@"
+            INSERT INTO {Config.DatabaseConnection.StoreCurrencyItemsName} (
+                SteamID, CurrencyType, Price, Type, UniqueId, DateOfPurchase, DateOfExpiration
+            ) VALUES (
+                @SteamID, @CurrencyType, @Price, @Type, @UniqueId, @DateOfPurchase, @DateOfExpiration
+            );
+        ",
+        new
+        {
+            player.SteamID,
+            item.CurrencyType,
+            item.Price,
+            item.Type,
+            item.UniqueId,
+            item.DateOfPurchase,
+            item.DateOfExpiration
+        });
+    }
+
+    public static void RemoveCurrencyItem(CCSPlayerController player, Store_CurrencyItem item)
+    {
+        ExecuteAsync($@"
+            DELETE FROM {Config.DatabaseConnection.StoreCurrencyItemsName}
+            WHERE SteamID = @SteamID AND CurrencyType = @CurrencyType AND UniqueId = @UniqueId;
+        ",
+        new
+        {
+            player.SteamID,
+            item.CurrencyType,
+            item.UniqueId
+        });
+    }
+
     public static void ResetDatabase()
     {
         Task.Run(async () =>
         {
             using MySqlConnection connection = await ConnectAsync();
 
+            connection.Query($@"DROP TABLE {Config.DatabaseConnection.StoreCurrencyItemsName}");
+            connection.Query($@"DROP TABLE {Config.DatabaseConnection.StoreCurrenciesName}");
+            connection.Query($@"DROP TABLE {Config.DatabaseConnection.StoreCurrencyTypesName}");
             connection.Query($@"DROP TABLE {Config.DatabaseConnection.StorePlayersName}");
             connection.Query($@"DROP TABLE {Config.DatabaseConnection.StoreItemsName}");
             connection.Query($@"DROP TABLE {Config.DatabaseConnection.StoreEquipments}");

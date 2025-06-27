@@ -67,5 +67,32 @@
 
   "FreePlayerSkin": "Free Player Skin",
   "CT": "CT Skins",
-  "Fernandez Frogman [CT]": "*Fernandez Frogman [CT]*"
+  "Fernandez Frogman [CT]": "*Fernandez Frogman [CT]*",
+
+  "currency_no_currencies": "{white}You don't have any currencies.",
+  "currency_balances_title": "{white}Your currency balances:",
+  "currency_balance_item": "  {0}: {1}",
+  "currency_no_permission": "{white}You don't have permission to use this command.",
+  "currency_invalid_amount": "{white}Invalid amount.",
+  "currency_player_not_found": "{white}Player not found: {0}",
+  "currency_type_not_found": "{white}Currency type not found: {0}",
+  "currency_given_success": "{white}Gave {0} {1} to {2}.",
+  "currency_received": "{white}You received {0} {1}.",
+  "currency_type_registered": "{white}Currency type '{0}' ({1}) has been registered.",
+  "currency_type_exists": "{white}Currency type '{0}' already exists.",
+  "currency_insufficient_funds": "{white}Insufficient {0}.",
+  "currency_purchase_success": "{white}Purchased {0} for {1} {2}.",
+  "currency_purchase_failed": "{white}Purchase failed.",
+  "currency_sell_success": "{white}Sold {0} for {1} {2}.",
+  "currency_sell_failed": "{white}Sale failed.",
+  "currency_equipped": "{white}Equipped {0}.",
+  "currency_unequipped": "{white}Unequipped {0}.",
+  "currency_select_title": "Select Currency",
+  "currency_store_title": "{0} Store [Balance: {1}]",
+  "currency_item_actions": "{0} - Actions",
+  "currency_equip": "Equip",
+  "currency_unequip": "Unequip",
+  "currency_sell": "Sell",
+  "currency_insufficient_suffix": " [Insufficient]",
+  "currency_no_available": "{white}No available currencies."
 }

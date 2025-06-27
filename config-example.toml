@@ -27,6 +27,15 @@ StoreItemsName = "store_items"
 # Table used to store which items players have equipped
 StoreEquipments = "store_equipments"
 
+# Table used to store player currency balances
+StoreCurrenciesName = "store_currencies"
+
+# Table used to store currency type definitions
+StoreCurrencyTypesName = "store_currency_types"
+
+# Table used to store currency-based item purchases
+StoreCurrencyItemsName = "store_currency_items"
+
 # ─────────────────────────────
 
 [Commands]
@@ -42,6 +51,11 @@ RefreshPlayersCredits = [ "refreshcredits" ]
 HideTrails = [ "hidetrails" ]
 PlayerSkinsOff = [ "model0", "modeloff" ]
 PlayerSkinsOn = [ "model1", "modelon" ]
+
+# Currency system commands
+Currency = [ "currency", "currencies", "balance" ]
+GiveCurrency = [ "givecurrency" ]
+RegisterCurrency = [ "registercurrency" ]
 
 # ─────────────────────────────
 

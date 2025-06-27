@@ -88,6 +88,9 @@ public sealed class Config_DatabaseConnection
     public string StorePlayersName { get; set; } = string.Empty;
     public string StoreItemsName { get; set; } = string.Empty;
     public string StoreEquipments { get; set; } = string.Empty;
+    public string StoreCurrenciesName { get; set; } = "store_currencies";
+    public string StoreCurrencyTypesName { get; set; } = "store_currency_types";
+    public string StoreCurrencyItemsName { get; set; } = "store_currency_items";
 }
 
 public sealed class Config_Commands
@@ -103,6 +106,9 @@ public sealed class Config_Commands
     public List<string> HideTrails { get; set; } = [];
     public List<string> PlayerSkinsOff { get; set; } = [];
     public List<string> PlayerSkinsOn { get; set; } = [];
+    public List<string> Currency { get; set; } = [];
+    public List<string> GiveCurrency { get; set; } = [];
+    public List<string> RegisterCurrency { get; set; } = [];
 }
 
 public sealed class Config_DefaultModels

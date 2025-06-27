@@ -6,6 +6,7 @@ using Store.Extension;
 using static Store.Config_Config;
 using static Store.FindTarget;
 using static Store.Store;
+using static StoreApi.Store;
 
 namespace Store;
 
@@ -24,7 +25,10 @@ public static class Command
             {config.Gift, ("Gift", Command_Gift)},
             {config.ResetPlayer, ("Reset player's inventory", Command_ResetPlayer)},
             {config.ResetDatabase, ("Reset database", Command_ResetDatabase)},
-            {config.RefreshPlayersCredits, ("Refresh players' credits", Command_RefreshPlayersCredits)}
+            {config.RefreshPlayersCredits, ("Refresh players' credits", Command_RefreshPlayersCredits)},
+            {config.Currency, ("Show currency balances", Command_Currency)},
+            {config.GiveCurrency, ("Give currency", Command_GiveCurrency)},
+            {config.RegisterCurrency, ("Register new currency type", Command_RegisterCurrency)}
         };
 
         foreach ((IEnumerable<string> commandList, (string description, CommandInfo.CommandCallback handler)) in commands)
@@ -207,5 +211,135 @@ public static class Command
         Console.ForegroundColor = ConsoleColor.Cyan;
         Console.WriteLine($"{Config.Settings.Tag}{Instance.Localizer["Players' credits are refreshed"]}");
         Console.ResetColor();
+    }
+
+    [CommandHelper(minArgs: 0, whoCanExecute: CommandUsage.CLIENT_ONLY)]
+    public static void Command_Currency(CCSPlayerController? player, CommandInfo command)
+    {
+        if (player == null) return;
+
+        List<Store_PlayerCurrency> currencies = Currency.GetPlayerCurrencies(player);
+        
+        if (currencies.Count == 0)
+        {
+            player.PrintToChatMessage("currency_no_currencies");
+            return;
+        }
+
+        player.PrintToChatMessage("currency_balances_title");
+        foreach (Store_PlayerCurrency currency in currencies)
+        {
+            Store_CurrencyType? currencyType = Currency.GetCurrencyType(currency.CurrencyType);
+            string displayName = currencyType?.DisplayName ?? currency.CurrencyType;
+            player.PrintToChat($"{Config.Settings.Tag}{Instance.Localizer["currency_balance_item", displayName, currency.Amount]}");
+        }
+    }
+
+    [CommandHelper(minArgs: 3, usage: "<player> <currency_type> <amount>", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
+    public static void Command_GiveCurrency(CCSPlayerController? player, CommandInfo command)
+    {
+        if (player != null && !AdminManager.PlayerHasPermissions(player, Config.Permissions.GiveCredits))
+        {
+            player.PrintToChatMessage("currency_no_permission");
+            return;
+        }
+
+        string targetName = command.GetArg(1);
+        string currencyType = command.GetArg(2);
+        
+        if (!int.TryParse(command.GetArg(3), out int amount))
+        {
+            string message = $"{Config.Settings.Tag}{Instance.Localizer["currency_invalid_amount"]}";
+            if (player != null)
+                player.PrintToChat(message);
+            else
+                Console.WriteLine(message);
+            return;
+        }
+
+        TargetFind targetFind = Find(command, true, true);
+        if (targetFind.Players.Count == 0)
+        {
+            string message = $"{Config.Settings.Tag}{Instance.Localizer["currency_player_not_found", targetName]}";
+            if (player != null)
+                player.PrintToChat(message);
+            else
+                Console.WriteLine(message);
+            return;
+        }
+
+        CCSPlayerController target = targetFind.Players[0];
+
+        Store_CurrencyType? currencyTypeInfo = Currency.GetCurrencyType(currencyType);
+        if (currencyTypeInfo == null)
+        {
+            string message = $"{Config.Settings.Tag}{Instance.Localizer["currency_type_not_found", currencyType]}";
+            if (player != null)
+                player.PrintToChat(message);
+            else
+                Console.WriteLine(message);
+            return;
+        }
+
+        int newAmount = Currency.Give(target, currencyType, amount);
+        Database.SavePlayerCurrency(target, new Store_PlayerCurrency
+        {
+            SteamID = target.SteamID,
+            CurrencyType = currencyType,
+            Amount = newAmount,
+            OriginalAmount = 0,
+            LastUpdated = DateTime.Now
+        });
+
+        string successMessage = $"{Config.Settings.Tag}{Instance.Localizer["currency_given_success", currencyTypeInfo.DisplayName, amount, target.PlayerName]}";
+        if (player != null)
+            player.PrintToChat(successMessage);
+        else
+            Console.WriteLine(successMessage);
+
+        target.PrintToChat($"{Config.Settings.Tag}{Instance.Localizer["currency_received", amount, currencyTypeInfo.DisplayName]}");
+    }
+
+    [CommandHelper(minArgs: 2, usage: "<type> <display_name> [description] [icon]", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
+    public static void Command_RegisterCurrency(CCSPlayerController? player, CommandInfo command)
+    {
+        if (player != null && !AdminManager.PlayerHasPermissions(player, Config.Permissions.GiveCredits))
+        {
+            player.PrintToChatMessage("currency_no_permission");
+            return;
+        }
+
+        string type = command.GetArg(1);
+        string displayName = command.GetArg(2);
+        string description = command.ArgCount > 3 ? command.GetArg(3) : "";
+        string icon = command.ArgCount > 4 ? command.GetArg(4) : "";
+
+        Store_CurrencyType currencyType = new()
+        {
+            Type = type,
+            DisplayName = displayName,
+            Description = description,
+            Icon = icon,
+            IsActive = true,
+            DateCreated = DateTime.Now
+        };
+
+        if (Currency.RegisterCurrencyType(currencyType))
+        {
+            Database.SaveCurrencyType(currencyType);
+            string message = $"{Config.Settings.Tag}{Instance.Localizer["currency_type_registered", displayName, type]}";
+            if (player != null)
+                player.PrintToChat(message);
+            else
+                Console.WriteLine(message);
+        }
+        else
+        {
+            string message = $"{Config.Settings.Tag}{Instance.Localizer["currency_type_exists", type]}";
+            if (player != null)
+                player.PrintToChat(message);
+            else
+                Console.WriteLine(message);
+        }
     }
 }
