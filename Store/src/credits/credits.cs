@@ -35,7 +35,25 @@ public static class Credits
         Store_Player? storePlayer = GetStorePlayer(player);
         if (storePlayer == null) return -1;
 
+        int oldCredits = storePlayer.Credits;
         storePlayer.Credits = credits;
+        
+        // Save credits change to database immediately
+        if (storePlayer.Credits != oldCredits)
+        {
+            Database.ExecuteAsync($@"
+                UPDATE {Config_Config.Config.DatabaseConnection.StorePlayersName}
+                SET Credits = @Credits, DateOfLastJoin = @DateOfLastJoin
+                WHERE SteamID = @SteamID;
+            ",
+            new
+            {
+                Credits = storePlayer.Credits,
+                DateOfLastJoin = DateTime.Now,
+                SteamID = player.SteamID
+            });
+        }
+        
         return storePlayer.Credits;
     }
 
@@ -44,7 +62,25 @@ public static class Credits
         Store_Player? storePlayer = GetStorePlayer(player);
         if (storePlayer == null) return -1;
 
+        int oldCredits = storePlayer.Credits;
         storePlayer.Credits = Math.Max(storePlayer.Credits + credits, 0);
+        
+        // Save credits change to database immediately
+        if (storePlayer.Credits != oldCredits)
+        {
+            Database.ExecuteAsync($@"
+                UPDATE {Config_Config.Config.DatabaseConnection.StorePlayersName}
+                SET Credits = @Credits, DateOfLastJoin = @DateOfLastJoin
+                WHERE SteamID = @SteamID;
+            ",
+            new
+            {
+                Credits = storePlayer.Credits,
+                DateOfLastJoin = DateTime.Now,
+                SteamID = player.SteamID
+            });
+        }
+        
         return storePlayer.Credits;
     }
 }

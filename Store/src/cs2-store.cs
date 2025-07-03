@@ -6,6 +6,7 @@ using Store.Extension;
 using StoreApi;
 using System.Reflection;
 using System.Text.Json;
+using VipCoreApi;
 using static StoreApi.Store;
 
 namespace Store;
@@ -31,6 +32,8 @@ public class Store : BasePlugin, IPluginConfig<Item_Config>
     public static StoreAPI Api { get; set; } = new();
     public Dictionary<string, Dictionary<string, string>> Items { get; set; } = [];
     public Dictionary<CBaseModelEntity, CCSPlayerController> InspectList { get; set; } = [];
+    public static PluginCapability<IVipCoreApi> VipCoreCapability { get; } = new("vipcore:core");
+    public static IVipCoreApi? VipCoreApi { get; set; }
 
     public override void Load(bool hotReload)
     {
@@ -72,6 +75,9 @@ public class Store : BasePlugin, IPluginConfig<Item_Config>
     public override void OnAllPluginsLoaded(bool hotReload)
     {
         ItemModuleManager.RegisterModules(Assembly.GetExecutingAssembly());
+
+        VipCoreApi = VipCoreCapability.Get();
+        if (VipCoreApi == null) return;
     }
 
     public void OnConfigParsed(Item_Config config)

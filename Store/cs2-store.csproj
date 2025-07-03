@@ -29,6 +29,9 @@
 	  <Reference Include="TagsApi">
 	    <HintPath>..\TagsApi.dll</HintPath>
 	  </Reference>
+	  <Reference Include="VipCoreApi">
+	    <HintPath>..\VipCoreApi.dll</HintPath>
+	  </Reference>
 	</ItemGroup>
 
 	<Target Name="ExcludeStoreApiFiles" AfterTargets="Build">

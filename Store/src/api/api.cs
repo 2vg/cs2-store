@@ -177,13 +177,4 @@ public class StoreAPI : IStoreApi
         return Currency.GetCurrencyType(currencyType);
     }
 
-    public bool CurrencyItem_Purchase(CCSPlayerController player, Dictionary<string, string> item, string currencyType)
-    {
-        return CurrencyItem.Purchase(player, item, currencyType);
-    }
-
-    public List<Store_CurrencyItem> GetPlayerCurrencyItems(CCSPlayerController player, string? currencyType)
-    {
-        return CurrencyItem.GetPlayerItems(player, currencyType);
-    }
 }

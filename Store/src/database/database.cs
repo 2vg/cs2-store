@@ -102,7 +102,6 @@ public static class Database
                         Type varchar(64) NOT NULL,
                         DisplayName varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
                         Description TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
-                        Icon varchar(255),
                         IsActive BOOLEAN NOT NULL DEFAULT TRUE,
                         DateCreated DATETIME NOT NULL,
                         PRIMARY KEY (id),
@@ -367,23 +366,13 @@ public static class Database
 
     public static void SavePlayer(CCSPlayerController player)
     {
-        int PlayerCredits = Credits.Get(player);
-        int PlayerOriginalCredits = Credits.GetOriginal(player);
-
-        if (PlayerOriginalCredits == -1 || PlayerCredits == -1)
-        {
-            return;
-        }
-
-        int SetCredits = PlayerCredits - PlayerOriginalCredits;
-
+        // Only update player name and last join date on disconnect
+        // Credits and currencies are now updated immediately on each transaction
         ExecuteAsync($@"
                 UPDATE
                     {Config.DatabaseConnection.StorePlayersName}
                 SET
                     PlayerName = @PlayerName,
-                    Credits = GREATEST(Credits + @SetCredits, 0), 
-                    DateOfJoin = @DateOfJoin, 
                     DateOfLastJoin = @DateOfLastJoin
                 WHERE
                     SteamID = @SteamID;
@@ -391,14 +380,9 @@ public static class Database
             new
             {
                 player.PlayerName,
-                SetCredits,
-                DateOfJoin = DateTime.Now,
                 DateOfLastJoin = DateTime.Now,
                 SteamId = player.SteamID,
             });
-
-        Credits.SetOriginal(player, PlayerCredits);
-
     }
 
     public static void SavePlayerItem(CCSPlayerController player, Store_Item item)
@@ -505,13 +489,12 @@ public static class Database
     {
         ExecuteAsync($@"
             INSERT INTO {Config.DatabaseConnection.StoreCurrencyTypesName} (
-                Type, DisplayName, Description, Icon, IsActive, DateCreated
+                Type, DisplayName, Description, IsActive, DateCreated
             ) VALUES (
-                @Type, @DisplayName, @Description, @Icon, @IsActive, @DateCreated
+                @Type, @DisplayName, @Description, @IsActive, @DateCreated
             ) ON DUPLICATE KEY UPDATE
                 DisplayName = @DisplayName,
                 Description = @Description,
-                Icon = @Icon,
                 IsActive = @IsActive;
         ",
         new
@@ -519,7 +502,6 @@ public static class Database
             currencyType.Type,
             currencyType.DisplayName,
             currencyType.Description,
-            currencyType.Icon,
             currencyType.IsActive,
             DateCreated = currencyType.DateCreated == default ? DateTime.Now : currencyType.DateCreated
         });

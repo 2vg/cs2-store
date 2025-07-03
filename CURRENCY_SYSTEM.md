@@ -1,45 +1,45 @@
-# CS2 Store - Currency System
+# CS2 Store - Integrated Currency System
 
-A new currency system has been added to the CS2 Store plugin. This system allows you to manage multiple special currencies separately from the traditional credit system.
+A flexible currency system is integrated into the CS2 Store plugin. This system allows you to create and manage multiple custom currencies alongside the traditional credit system, all within a unified store interface.
 
 ## Feature Overview
 
 ### Multiple Currency Support
-- Special points during event periods
-- VIP tokens
-- Achievement reward coins
-- Other custom currencies
+- Create custom currencies for various purposes:
+  - Special points during event periods
+  - VIP tokens
+  - Achievement reward coins
+  - And any other currency you can imagine.
 
-### Flexible Currency Management
-- Dynamic registration of currency types
-- Balance management per currency
-- Purchase and sale of currency-specific items
+### Unified Store Experience
+- All items, whether for credits or custom currencies, are displayed in the main store menu.
+- The required currency and price are clearly shown for each item (e.g., "100 Credits" or "10 Event Coins").
+- A single, powerful logic backend handles all types of transactions securely.
 
 ### API Integration
-- Currency operations from external plugins
-- Event-based currency granting
-- Conditional currency systems
+- Perform currency and item operations from external plugins.
+- Grant currencies based on events, achievements, or any custom logic.
+- Build complex gameplay systems on top of the store's economy.
 
 ## Database Structure
 
 ### New Tables
 
 #### `store_currency_types`
-Stores currency type definitions
+Stores the definitions for your custom currency types.
 ```sql
 CREATE TABLE store_currency_types (
     id INT AUTO_INCREMENT PRIMARY KEY,
     Type varchar(64) UNIQUE NOT NULL,
     DisplayName varchar(255) NOT NULL,
     Description TEXT,
-    Icon varchar(255),
     IsActive BOOLEAN DEFAULT TRUE,
     DateCreated DATETIME NOT NULL
 );
 ```
 
 #### `store_currencies`
-Stores player currency balances
+Stores the balance of each custom currency for every player.
 ```sql
 CREATE TABLE store_currencies (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -51,44 +51,29 @@ CREATE TABLE store_currencies (
 );
 ```
 
-#### `store_currency_items`
-Stores items purchased with currency
-```sql
-CREATE TABLE store_currency_items (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    SteamID BIGINT UNSIGNED NOT NULL,
-    CurrencyType varchar(64) NOT NULL,
-    Price INT UNSIGNED NOT NULL,
-    Type varchar(16) NOT NULL,
-    UniqueId varchar(256) NOT NULL,
-    DateOfPurchase DATETIME NOT NULL,
-    DateOfExpiration DATETIME NOT NULL
-);
-```
-
 ## Configuration
 
 ### config.toml
 ```toml
 [DatabaseConnection]
-# Table names for currency system
+# Table names for the currency system
 StoreCurrenciesName = "store_currencies"
 StoreCurrencyTypesName = "store_currency_types"
-StoreCurrencyItemsName = "store_currency_items"
 
 [Commands]
-# Commands for currency system
+# Commands for the currency system
 Currency = [ "currency", "currencies", "balance" ]
 GiveCurrency = [ "givecurrency" ]
 RegisterCurrency = [ "registercurrency" ]
 ```
 
 ### Item Configuration (JSON)
+To make an item require a custom currency, simply add the `currency_type` field to its definition. If omitted, it will default to "credits".
+
 ```json
 {
   "Event Items": {
     "name": "Event Items",
-    "currency_type": "event_points",
     "Event Knife": {
       "name": "Event Knife",
       "type": "weapon",
@@ -96,6 +81,13 @@ RegisterCurrency = [ "registercurrency" ]
       "price": 100,
       "currency_type": "event_points",
       "weapon": "weapon_knife"
+    },
+    "Regular Grenade": {
+      "name": "HE Grenade",
+      "type": "equipment",
+      "uniqueid": "hegrenade",
+      "price": 300,
+      "weapon": "weapon_hegrenade"
     }
   }
 }
@@ -104,13 +96,11 @@ RegisterCurrency = [ "registercurrency" ]
 ## Commands
 
 ### Player Commands
-- `!currency` - Display owned currency balances
-- `!currencies` - Same as above
-- `!balance` - Same as above
+- `!currency` / `!currencies` / `!balance` - Displays your balances for all owned custom currencies.
 
 ### Admin Commands
-- `!givecurrency <player> <currency_type> <amount>` - Give currency to a player
-- `!registercurrency <type> <display_name> [description] [icon]` - Register a new currency type
+- `!givecurrency <player> <currency_type> <amount>` - Gives a specified amount of a custom currency to a player.
+- `!registercurrency <type> <display_name> [description]` - Registers a new currency type. `type` is the internal name used in JSON files, and `display_name` is what players see in the game.
 
 ## API Usage Examples
 
@@ -119,11 +109,13 @@ RegisterCurrency = [ "registercurrency" ]
 ```csharp
 using StoreApi;
 
-// Get API instance
+// Get the API instance
 var storeApi = IStoreApi.Capability.Get();
 if (storeApi == null) return;
 
-// Register currency type
+// --- Currency Management ---
+
+// Register a new currency type
 var eventCurrency = new Store_CurrencyType
 {
     Type = "event_points",
@@ -134,96 +126,51 @@ var eventCurrency = new Store_CurrencyType
 };
 storeApi.RegisterCurrencyType(eventCurrency);
 
-// Give currency to player
+// Give currency to a player
 storeApi.GivePlayerCurrency(player, "event_points", 50);
 
-// Check currency balance
+// Check a player's balance
 int balance = storeApi.GetPlayerCurrency(player, "event_points");
 
-// Purchase with currency
+// --- Item Transactions ---
+
+// Purchase an item (works for both credits and custom currencies)
 var item = storeApi.GetItem("event_knife");
 if (item != null)
 {
-    storeApi.CurrencyItem_Purchase(player, item, "event_points");
+    // The backend automatically handles which currency to deduct based on the item's `currency_type`.
+    storeApi.Item_Purchase(player, item);
 }
 ```
 
 ### Event Handling
 ```csharp
-// Utilize existing events
+// Utilize existing events for all purchases
 storeApi.OnPlayerPurchaseItem += (player, item) =>
 {
-    // Handle currency purchases
-    if (item.ContainsKey("currency_type"))
+    // Check if the purchased item used a custom currency
+    if (item.TryGetValue("currency_type", out string currencyType))
     {
-        string currencyType = item["currency_type"];
-        // Custom processing
+        // It was a custom currency purchase
+        Console.WriteLine($"Player {player.PlayerName} purchased {item["name"]} with {currencyType}.");
+    }
+    else
+    {
+        // It was a credit purchase
+        Console.WriteLine($"Player {player.PlayerName} purchased {item["name"]} with credits.");
     }
 };
 ```
 
-## Usage Scenarios
-
-### 1. Special Currency During Events
-```csharp
-// At event start
-storeApi.RegisterCurrencyType(new Store_CurrencyType
-{
-    Type = "halloween_tokens",
-    DisplayName = "Halloween Tokens",
-    Description = "Halloween event exclusive currency"
-});
-
-// On mission completion
-storeApi.GivePlayerCurrency(player, "halloween_tokens", 10);
-```
-
-### 2. VIP Exclusive Currency
-```csharp
-// Daily grant to VIP players
-if (IsVipPlayer(player))
-{
-    storeApi.GivePlayerCurrency(player, "vip_tokens", 5);
-}
-```
-
-### 3. Achievement Reward System
-```csharp
-// On specific achievement
-if (PlayerAchievedSomething(player))
-{
-    storeApi.GivePlayerCurrency(player, "achievement_coins", 25);
-}
-```
-
 ## Menu System
 
-The currency system is integrated with the existing menu system, allowing players to:
-- Access currency-specific stores through currency selection menu
-- Purchase and sell currency-exclusive items
-- Check currency balances
+The currency system is seamlessly integrated into the main store menu.
+- There are no separate menus for different currencies.
+- The store menu intelligently displays the price and the required currency for each item (e.g., "Price: 100 Credits" or "Price: 10 Event Coins").
+- Players can see all their currency balances in the "Credit Info" section of the main menu.
 
 ## Important Notes
 
-1. **Database Migration**: New tables are automatically created in existing databases
-2. **Compatibility**: Operates completely independently from the existing credit system
-3. **Performance**: Consider database index optimization for large numbers of currency types or transactions
-
-## Troubleshooting
-
-### Common Issues
-1. **Currency types not showing**: Check if `IsActive` flag is set to true
-2. **Cannot purchase**: Verify that `currency_type` is correctly set on items
-3. **Balance not updating**: Check database connection and table permissions
-
-### Log Verification
-```
-[Store] Currency system initialized
-[Store] Registered currency type: event_points
-[Store] Player purchased item with currency: event_points
-```
-
-## Future Expansion Plans
-
-- Currency exchange system
-- Time-limited currencies
+1.  **Database Migration**: The new tables (`store_currencies`, `store_currency_types`) are automatically created in your existing database.
+2.  **Compatibility**: The custom currency system is fully integrated with the credit system. You can have items for credits and various custom currencies side-by-side in your store.
+3.  **Performance**: Consider database index optimization if you plan to have a very large number of currency types or transactions.

@@ -300,7 +300,7 @@ public static class Command
         target.PrintToChat($"{Config.Settings.Tag}{Instance.Localizer["currency_received", amount, currencyTypeInfo.DisplayName]}");
     }
 
-    [CommandHelper(minArgs: 2, usage: "<type> <display_name> [description] [icon]", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
+    [CommandHelper(minArgs: 2, usage: "<type> <display_name> [description]", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
     public static void Command_RegisterCurrency(CCSPlayerController? player, CommandInfo command)
     {
         if (player != null && !AdminManager.PlayerHasPermissions(player, Config.Permissions.GiveCredits))
@@ -312,14 +312,12 @@ public static class Command
         string type = command.GetArg(1);
         string displayName = command.GetArg(2);
         string description = command.ArgCount > 3 ? command.GetArg(3) : "";
-        string icon = command.ArgCount > 4 ? command.GetArg(4) : "";
 
         Store_CurrencyType currencyType = new()
         {
             Type = type,
             DisplayName = displayName,
             Description = description,
-            Icon = icon,
             IsActive = true,
             DateCreated = DateTime.Now
         };

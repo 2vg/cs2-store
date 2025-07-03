@@ -66,11 +66,12 @@ public static class Item
         item.TryGetValue("flag", out string? flag);
         bool hasFlag = MenuBase.CheckFlag(player, flag, false);
         bool isVip = IsPlayerVip(player);
+        bool hasVipFreeAccess = HasVipFreeAccess(player, item);
 
         if (!ItemModuleManager.Modules.TryGetValue(item["type"], out IItemModule? type))
             return false;
 
-        if (hasFlag || isVip)
+        if (hasFlag || isVip || hasVipFreeAccess)
         {
             if (!type.Equipable)
                 return false;
@@ -81,8 +82,20 @@ public static class Item
             return true;
         }
 
-        if (Credits.Get(player) < int.Parse(item["price"]))
-            return false;
+        // Check currency type and amount
+        string currencyType = item.TryGetValue("currency_type", out string? customCurrency) ? customCurrency : "credits";
+        int price = int.Parse(item["price"]);
+        
+        if (currencyType == "credits")
+        {
+            if (Credits.Get(player) < price)
+                return false;
+        }
+        else
+        {
+            if (Currency.Get(player, currencyType) < price)
+                return false;
+        }
 
         if (type.RequiresAlive == true && !player.PawnIsAlive)
             return false;
@@ -104,10 +117,12 @@ public static class Item
         item.TryGetValue("flag", out string? flag);
         bool hasFlag = MenuBase.CheckFlag(player, flag, false);
         bool isVip = IsPlayerVip(player);
+        bool hasVipFreeAccess = HasVipFreeAccess(player, item);
         
         int price = int.Parse(item["price"]);
+        string currencyType = item.TryGetValue("currency_type", out string? customCurrency) ? customCurrency : "credits";
 
-        if (hasFlag || isVip)
+        if (hasFlag || isVip || hasVipFreeAccess)
         {
             if (!ItemModuleManager.Modules.TryGetValue(item["type"], out IItemModule? itemType))
             {
@@ -124,10 +139,22 @@ public static class Item
             return Equip(player, item);
         }
 
-        if (Credits.Get(player) < price)
+        // Check currency amount
+        if (currencyType == "credits")
         {
-            player.PrintToChatMessage("No credits enough");
-            return false;
+            if (Credits.Get(player) < price)
+            {
+                player.PrintToChatMessage("No credits enough");
+                return false;
+            }
+        }
+        else
+        {
+            if (Currency.Get(player, currencyType) < price)
+            {
+                player.PrintToChatMessage("Not enough {0}", currencyType);
+                return false;
+            }
         }
 
         if (!ItemModuleManager.Modules.TryGetValue(item["type"], out IItemModule? type))
@@ -159,7 +186,16 @@ public static class Item
                 return false;
         }
 
-        Credits.Give(player, -price);
+        // Deduct currency
+        if (currencyType == "credits")
+        {
+            Credits.Give(player, -price);
+        }
+        else
+        {
+            Currency.Spend(player, currencyType, price);
+        }
+
         player.PrintToChatMessage("Purchase Succeeded", GetItemName(player, item));
 
         Store.Api.PlayerPurchaseItem(player, item);
@@ -273,7 +309,8 @@ public static class Item
 
         if (!ignoreVip && IsPlayerVip(player)) return true;
 
-        // 個別アイテムのフラグチェック
+        if (!ignoreVip && HasVipFreeAccess(player, item)) return true;
+
         item.TryGetValue("flag", out string? flag);
         bool hasFlag = MenuBase.CheckFlag(player, flag, false);
 
@@ -360,8 +397,9 @@ public static class Item
                 itemConfig.TryGetValue("flag", out string? flag);
                 bool hasFlag = MenuBase.CheckFlag(player, flag, false);
                 bool isVip = IsPlayerVip(player);
+                bool hasVipFreeAccess = HasVipFreeAccess(player, itemConfig);
 
-                if (hasFlag || isVip)
+                if (hasFlag || isVip || hasVipFreeAccess)
                 {
                     shouldRemoveEquipment = false;
                 }
@@ -375,5 +413,44 @@ public static class Item
 
             Instance.GlobalStorePlayerItems.Remove(item);
         }
+    }
+
+    public static bool HasVipFreeAccess(CCSPlayerController player, Dictionary<string, string> item)
+    {
+        bool hasVipOnly = item.TryGetValue("vip_only", out string? vipOnly) && vipOnly == "true";
+        bool hasVipGroups = item.TryGetValue("vip_groups", out string? vipGroups) && !string.IsNullOrEmpty(vipGroups);
+        
+        if (!hasVipOnly && !hasVipGroups)
+            return false;
+
+        if (Store.VipCoreApi == null)
+            return false;
+
+        if (hasVipOnly)
+        {
+            if (!Store.VipCoreApi.IsClientVip(player))
+                return false;
+
+            if (!hasVipGroups)
+                return true;
+        }
+
+        if (hasVipGroups)
+        {
+            if (!Store.VipCoreApi.IsClientVip(player))
+                return false;
+
+            string playerVipGroup = Store.VipCoreApi.GetClientVipGroup(player);
+            if (string.IsNullOrEmpty(playerVipGroup))
+                return false;
+
+            string[] allowedGroups = vipGroups!.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                              .Select(g => g.Trim())
+                                              .ToArray();
+
+            return allowedGroups.Contains(playerVipGroup, StringComparer.OrdinalIgnoreCase);
+        }
+
+        return true;
     }
 }

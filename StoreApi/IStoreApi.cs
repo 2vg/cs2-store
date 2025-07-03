@@ -43,6 +43,4 @@ public interface IStoreApi
     List<Store_CurrencyType> GetAvailableCurrencyTypes();
     bool RegisterCurrencyType(Store_CurrencyType currencyType);
     Store_CurrencyType? GetCurrencyType(string currencyType);
-    bool CurrencyItem_Purchase(CCSPlayerController player, Dictionary<string, string> item, string currencyType);
-    List<Store_CurrencyItem> GetPlayerCurrencyItems(CCSPlayerController player, string? currencyType);
 }

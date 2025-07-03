@@ -15,7 +15,8 @@ public static class Menu
 {
     public static void DisplayStore(CCSPlayerController player, bool inventory)
     {
-        OpenMenu(player, Instance.Localizer.ForPlayer(player, "menu_store<title>", Credits.Get(player)), Instance.Config.Items, inventory, null);
+        string title = Instance.Localizer.ForPlayer(player, "menu_store<title>", Credits.Get(player));
+        OpenMenu(player, title, Instance.Config.Items, inventory, null);
     }
 
     public static void OpenMenu(CCSPlayerController player, string title, JsonElement elementData, bool inventory, IMenu? prevMenu)
@@ -24,9 +25,19 @@ public static class Menu
         menu.ScreenMenu_ShowResolutionsOption = prevMenu == null;
         menu.PrevMenu = prevMenu;
 
-        List<JsonProperty> items = elementData.GetElementJsonProperty(["flag", "team"]);
+        // Add Credit Info option at the top if this is the main store menu (prevMenu is null)
+        if (prevMenu == null)
+        {
+            AddCreditInfoOption(menu, player);
+        }
+
+        List<JsonProperty> items = elementData.GetElementJsonProperty(["flag", "team", "name", "currency_type"]);
         foreach (JsonProperty item in items)
         {
+            // Skip non-object properties (like "name", "currency_type", etc.)
+            if (item.Value.ValueKind != JsonValueKind.Object)
+                continue;
+
             if (item.Value.TryGetProperty("flag", out JsonElement flagElement) && !CheckFlag(player, flagElement.ToString(), true))
                 continue;
 
@@ -43,7 +54,11 @@ public static class Menu
                 continue;
 
             string categoryName = GetCategoryName(player, item);
-            menu.AddItem(categoryName, (p, o) => OpenMenu(p, categoryName, item.Value, inventory, menu));
+            menu.AddItem(categoryName, (p, o) =>
+            {
+                o.PostSelectAction = PostSelectAction.Nothing;
+                OpenMenu(p, categoryName, item.Value, inventory, menu);
+            });
         }
 
         menu.Display(player, 0);
@@ -64,16 +79,34 @@ public static class Menu
         {
             menu.AddMenuOption(player, (p, o) =>
             {
+                o.PostSelectAction = PostSelectAction.Nothing;
                 p.ExecuteClientCommand($"play {Config.Menu.MenuPressSoundYes}");
                 DisplayItemOption(p, item, inventory, prevMenu);
             }, Item.GetItemName(player, item));
         }
         else if (!inventory && !item.IsHidden())
         {
-            menu.AddMenuOption(player, (p, o) => SelectPurchase(p, item, int.Parse(item["price"]) > 0, inventory, prevMenu),
+            string currencyType = item.TryGetValue("currency_type", out string? customCurrency) ? customCurrency : "credits";
+            string priceDisplay;
+            if (currencyType == "credits")
+            {
+                priceDisplay = item["price"];
+            }
+            else
+            {
+                var currencyInfo = Currency.GetCurrencyType(currencyType);
+                string currencyName = currencyInfo?.DisplayName ?? currencyType;
+                priceDisplay = $"{item["price"]} {currencyName}";
+            }
+
+            menu.AddMenuOption(player, (p, o) =>
+            {
+                o.PostSelectAction = PostSelectAction.Nothing;
+                SelectPurchase(p, item, int.Parse(item["price"]) > 0, inventory, prevMenu);
+            },
                 Item.CanBuy(player, item) ? DisableOption.None : DisableOption.DisableHideNumber,
                 int.Parse(item["price"]) <= 0 ? "menu_store<purchase1>" : "menu_store<purchase>",
-                Item.GetItemName(player, item), item["price"]);
+                Item.GetItemName(player, item), priceDisplay);
         }
     }
 
@@ -109,6 +142,7 @@ public static class Menu
         {
             menu.AddMenuOption(player, (p, o) =>
             {
+                o.PostSelectAction = PostSelectAction.Nothing;
                 if (Item.Unequip(p, item, true))
                 {
                     p.ExecuteClientCommand($"play {Config.Menu.MenuPressSoundYes}");
@@ -121,6 +155,7 @@ public static class Menu
         {
             menu.AddMenuOption(player, (p, o) =>
             {
+                o.PostSelectAction = PostSelectAction.Nothing;
                 if (Item.Equip(p, item))
                 {
                     p.ExecuteClientCommand($"play {Config.Menu.MenuPressSoundYes}");
@@ -140,6 +175,7 @@ public static class Menu
                 {
                     menu.AddMenuOption(player, (p, o) =>
                     {
+                        o.PostSelectAction = PostSelectAction.Nothing;
                         p.ExecuteClientCommand($"play {Config.Menu.MenuPressSoundYes}");
                         Item.Sell(p, item);
                         p.PrintToChatMessage("Item Sell", Item.GetItemName(p, item));
@@ -165,6 +201,7 @@ public static class Menu
 
         menu.AddMenuOption(player, (p, o) =>
         {
+            o.PostSelectAction = PostSelectAction.Nothing;
             if (Item.Purchase(p, item))
             {
                 p.ExecuteClientCommand($"play {Config.Menu.MenuPressSoundYes}");
@@ -179,6 +216,7 @@ public static class Menu
 
         menu.AddMenuOption(player, (p, o) =>
         {
+            o.PostSelectAction = PostSelectAction.Nothing;
             p.ExecuteClientCommand($"play {Config.Menu.MenuPressSoundNo}");
             DisplayStore(p, inventory);
         }, "menu_store<no>");
@@ -199,5 +237,32 @@ public static class Menu
 
             InspectAction(p, item, item["type"]);
         }, "menu_store<inspect>");
+    }
+
+    private static void AddCreditInfoOption(IMenu menu, CCSPlayerController player)
+    {
+        menu.AddItem("Credit Info", (p, o) => {
+            o.PostSelectAction = PostSelectAction.Nothing;
+            DisplayCreditInfoMenu(p, menu);
+        });
+    }
+
+    private static void DisplayCreditInfoMenu(CCSPlayerController player, IMenu prevMenu)
+    {
+        BaseMenu menu = CreateMenuByType("Credit Info");
+        menu.PrevMenu = prevMenu;
+
+        // Add credits
+        int credits = Credits.Get(player);
+        menu.AddItem($"Credits: {credits}", DisableOption.DisableHideNumber);
+
+        // Add currencies
+        var currencies = Currency.GetPlayerCurrencies(player);
+        foreach (var currency in currencies)
+        {
+            menu.AddItem($"{currency.CurrencyType}: {currency.Amount}", DisableOption.DisableHideNumber);
+        }
+
+        menu.Display(player, 0);
     }
 }

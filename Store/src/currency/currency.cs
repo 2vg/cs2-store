@@ -18,7 +18,7 @@ public static class Currency
 
         Store_PlayerCurrency? currency = Instance.GlobalStorePlayerCurrencies
             .FirstOrDefault(c => c.SteamID == player.SteamID && c.CurrencyType == currencyType);
-        
+
         return currency?.Amount ?? 0;
     }
 
@@ -29,7 +29,7 @@ public static class Currency
 
         Store_PlayerCurrency? currency = Instance.GlobalStorePlayerCurrencies
             .FirstOrDefault(c => c.SteamID == player.SteamID && c.CurrencyType == currencyType);
-        
+
         return currency?.OriginalAmount ?? 0;
     }
 
@@ -147,7 +147,7 @@ public static class Currency
     }
 
     public static Store_CurrencyType? GetCurrencyType(string currencyType)
-  {
-    return Instance.GlobalStoreCurrencyTypes.FirstOrDefault(c => c.Type == currencyType);
-  }
+    {
+        return Instance.GlobalStoreCurrencyTypes.FirstOrDefault(c => c.Type == currencyType);
+    }
 }

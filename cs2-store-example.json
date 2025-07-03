@@ -13,6 +13,18 @@
           "disable_leg": "0",
           "expiration": "0",
           "hide": "false"
+        },
+        "Fernandez Frogman Event [CT]": {
+          "uniqueid": "frogman",
+          "model": "characters/models/ctm_diver/ctm_diver_variantb.vmdl",
+          "armModel": "",
+          "type": "playerskin",
+          "currency_type": "event_points",
+          "price": "1000",
+          "slot": "3",
+          "disable_leg": "0",
+          "expiration": "0",
+          "hide": "false"
         }
       },
       "T": {
@@ -40,6 +52,32 @@
         "price": "1000",
         "slot": "1",
         "flag": "@css/root,76561199165718810",
+        "disable_leg": "false",
+        "expiration": "0",
+        "hide": "false"
+      }
+    },
+    "VIP Free Items": {
+      "VIP Free Skin": {
+        "uniqueid": "vip_free_skin",
+        "model": "characters/models/ctm_diver/ctm_diver_varianta.vmdl",
+        "armModel": "",
+        "type": "playerskin",
+        "price": "5000",
+        "slot": "1",
+        "vip_only": "true",
+        "disable_leg": "false",
+        "expiration": "0",
+        "hide": "false"
+      },
+      "Premium Group Free Skin": {
+        "uniqueid": "premium_group_free_skin",
+        "model": "characters/models/ctm_diver/ctm_diver_variantd.vmdl",
+        "armModel": "",
+        "type": "playerskin",
+        "price": "10000",
+        "slot": "1",
+        "vip_groups": "premium,diamond",
         "disable_leg": "false",
         "expiration": "0",
         "hide": "false"
